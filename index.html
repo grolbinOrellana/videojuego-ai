@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Run - Plataformas 2D</title>
+    <!-- Google Fonts: Orbitron (futurista) y Rajdhani -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Phaser JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <link rel="stylesheet" href="style.css?v=1.1">
+</head>
+<body>
+    <div id="app-container">
+        <!-- Contenedor del Juego Phaser -->
+        <div id="game-container"></div>
+
+        <!-- Pantalla de Inicio (MainMenu Overlay) -->
+        <div id="menu-overlay" class="overlay active">
+            <div class="glass-panel">
+                <h1 class="neon-title" data-text="NEON RUN">NEON RUN</h1>
+                <p class="subtitle">Desafía la gravedad en el vacío cibernético</p>
+                
+                <div class="instructions">
+                    <h3>CONTROLES</h3>
+                    <div class="control-keys">
+                        <div class="key-item">
+                            <span class="key">←</span>
+                            <span class="key">→</span>
+                            <span class="desc">Moverse</span>
+                        </div>
+                        <div class="key-item">
+                            <span class="key">↑</span>
+                            <span class="key-wide">Espacio</span>
+                            <span class="desc">Saltar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-play" class="btn-neon">
+                    <span class="btn-text">INICIAR JUEGO</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Victoria (Win Overlay) -->
+        <div id="win-overlay" class="overlay">
+            <div class="glass-panel win-panel">
+                <h2 class="neon-text-green">¡SISTEMA SUPERADO!</h2>
+                <p class="stats-text">Has alcanzado la meta con éxito.</p>
+                
+                <div class="stats-box">
+                    <p>Gemas recolectadas: <span id="win-gems" class="highlight">0/10</span></p>
+                </div>
+
+                <button id="btn-restart-win" class="btn-neon green">
+                    <span class="btn-text">REINICIAR</span>
+                    <span class="btn-glow"></span>
+                </button>
+
+                <button id="btn-next-level" class="btn-neon blue" style="margin-top: 15px; display: none;">
+                    <span class="btn-text">SIGUIENTE NIVEL</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Derrota (Game Over Overlay) -->
+        <div id="gameover-overlay" class="overlay">
+            <div class="glass-panel gameover-panel">
+                <h2 class="neon-text-red">¡CONEXIÓN PERDIDA!</h2>
+                <p class="stats-text">Te has desvanecido en el vacío.</p>
+
+                <button id="btn-restart-fail" class="btn-neon red">
+                    <span class="btn-text">REINTENTAR</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- HUD (Cabecera durante el juego) -->
+        <div id="game-hud" class="hud-container">
+            <div class="hud-item">
+                <span class="hud-label">GEMAS:</span>
+                <span id="hud-gems" class="hud-value">0 / 0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">ESTADO:</span>
+                <span id="hud-status" class="hud-value neon-glow-cyan">ACTIVO</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cargar Script del Juego -->
+    <script src="game.js?v=1.1"></script>
+</body>
+</html>
