@@ -27,6 +27,7 @@ class GameScene extends Phaser.Scene {
     // Carga los sprites del jugador y genera texturas de neón antes del render.
     // ------------------------------------------------------------------------
     preload() {
+    console.log("VERSION NUEVA");
         // Cargar los sprites del personaje principal desde la carpeta de Recursos
         this.load.image('frontal', 'Recursos/frontal.png');
         this.load.image('derecha', 'Recursos/derecha.png');
@@ -35,7 +36,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('saltoIzquierda', 'Recursos/saltoIzquierda.png');
 
         // Genera todas las texturas de neón y de luna usando la API Canvas de Phaser
-        this.createNeonTextures();
+       // this.createNeonTextures();
     }
 
     // ------------------------------------------------------------------------
@@ -43,6 +44,14 @@ class GameScene extends Phaser.Scene {
     // Construye el mundo, el jugador, las plataformas y los controles de entrada.
     // ------------------------------------------------------------------------
     create() {
+        this.isGameOver = false;
+this.isGameWon = false;
+
+console.log("CREATE");
+console.log(this.isGameOver, this.isGameWon);
+        console.log("CREATE EJECUTADO");
+        this.createNeonTextures();
+        this.physics.resume();
         // Registrar el tiempo inicial de acción
         this.lastActionTime = this.time.now;
 
@@ -185,7 +194,8 @@ class GameScene extends Phaser.Scene {
         this.playerVisual = this.add.sprite(100, 450, 'frontal');
         this.playerVisual.setOrigin(0.5, 0.5);
         this.playerVisual.setDisplaySize(48, 48); 
-
+        this.playerVisual.setVisible(true);
+        this.playerVisual.setActive(true);
 
 
         // --- 3.7 COLISIONES ---
@@ -217,7 +227,15 @@ class GameScene extends Phaser.Scene {
     // 4. ACTUALIZACIÓN PERIÓDICA (update)
     // ------------------------------------------------------------------------
     update() {
-        if (this.isGameOver || this.isGameWon) return;
+        if (this.isGameOver || this.isGameWon) {
+    console.log(
+        this.player.x,
+        this.player.y,
+        this.player.body.enable,
+        this.physics.world.isPaused
+    );
+    return;
+}
 
         let isMovingLeft = this.cursors.left.isDown || this.keyA.isDown;
         let isMovingRight = this.cursors.right.isDown || this.keyD.isDown;
@@ -517,7 +535,10 @@ class GameScene extends Phaser.Scene {
         this.createPlatformTexture('plat_moon_100', 100, 20, '#a5f3fc', '#06b6d4', true);
 
         // Textura del Portal
-        let ptCanvas = this.textures.createCanvas('portal_tex', 40, 80);
+        if (!this.textures.exists('portal_tex')) {
+
+    let ptCanvas = this.textures.createCanvas('portal_tex', 40, 80);
+
         let ptCtx = ptCanvas.context;
         ptCtx.strokeStyle = '#10b981';
         ptCtx.lineWidth = 4;
@@ -529,10 +550,12 @@ class GameScene extends Phaser.Scene {
         ptGrad.addColorStop(1, 'rgba(16, 185, 129, 0.3)');
         ptCtx.fillStyle = ptGrad;
         ptCtx.fillRect(6, 6, 28, 68);
-        ptCanvas.refresh();
-
+  ptCanvas.refresh();
+}
         // Textura de las Gemas
-        let gCanvas = this.textures.createCanvas('gem_tex', 16, 16);
+        if (!this.textures.exists('gem_tex')) {
+
+    let gCanvas = this.textures.createCanvas('gem_tex', 16, 16);
         let gCtx = gCanvas.context;
         gCtx.fillStyle = '#facc15';
         gCtx.beginPath();
@@ -550,7 +573,8 @@ class GameScene extends Phaser.Scene {
         gCtx.lineTo(3, 8);
         gCtx.closePath();
         gCtx.fill();
-        gCanvas.refresh();
+       gCanvas.refresh();
+}
 
         // Partículas
         this.createParticleTexture('part_white', '#ffffff');
@@ -560,27 +584,39 @@ class GameScene extends Phaser.Scene {
         this.createParticleTexture('part_green', '#10b981');
 
         // Textura de la Tierra (Fondo Nivel Lunar)
-        let earthCanvas = this.textures.createCanvas('earth_tex', 128, 128);
-        let eCtx = earthCanvas.context;
-        let eGrad = eCtx.createRadialGradient(64, 64, 10, 64, 64, 60);
-        eGrad.addColorStop(0, '#e0f2fe'); // Núcleo luminoso
-        eGrad.addColorStop(0.3, '#38bdf8'); // Atmósfera
-        eGrad.addColorStop(0.6, '#0284c7'); // Océanos
-        eGrad.addColorStop(0.8, '#16a34a'); // Continentes
-        eGrad.addColorStop(1, '#08070d');
-        eCtx.fillStyle = eGrad;
-        eCtx.beginPath();
-        eCtx.arc(64, 64, 60, 0, Math.PI * 2);
-        eCtx.fill();
-        eCtx.strokeStyle = '#38bdf8';
-        eCtx.lineWidth = 2;
-        eCtx.stroke();
-        earthCanvas.refresh();
+        if (!this.textures.exists('earth_tex')) {
+            let earthCanvas = this.textures.createCanvas('earth_tex', 128, 128);
+            let eCtx = earthCanvas.context;
+            let eGrad = eCtx.createRadialGradient(64, 64, 10, 64, 64, 60);
+            eGrad.addColorStop(0, '#e0f2fe'); 
+            eGrad.addColorStop(0.3, '#38bdf8'); 
+            eGrad.addColorStop(0.6, '#0284c7'); 
+            eGrad.addColorStop(0.8, '#16a34a'); 
+            eGrad.addColorStop(1, '#08070d');
+            eCtx.fillStyle = eGrad;
+            eCtx.beginPath();
+            eCtx.arc(64, 64, 60, 0, Math.PI * 2);
+            eCtx.fill();
+            eCtx.strokeStyle = '#38bdf8';
+            eCtx.lineWidth = 2;
+            eCtx.stroke();
+            earthCanvas.refresh();
+        }
     }
 
     createPlatformTexture(key, width, height, startColor, endColor, isMoon = false) {
-        let canvas = this.textures.createCanvas(key, width, height);
-        let ctx = canvas.context;
+
+    console.log("ENTRÓ", key);
+
+    if (this.textures.exists(key)) {
+        console.log("YA EXISTE", key);
+        return;
+    }
+
+    console.log("CREANDO", key);
+
+    let canvas = this.textures.createCanvas(key, width, height);
+    let ctx = canvas.context;
 
         if (isMoon) {
             // Fondo gris roca lunar
@@ -627,12 +663,19 @@ class GameScene extends Phaser.Scene {
     }
 
     createParticleTexture(key, hexColor) {
-        let canvas = this.textures.createCanvas(key, 6, 6);
-        let ctx = canvas.context;
-        ctx.fillStyle = hexColor;
-        ctx.fillRect(0, 0, 6, 6);
-        canvas.refresh();
+
+    if (this.textures.exists(key)) {
+        return;
     }
+
+    let canvas = this.textures.createCanvas(key, 6, 6);
+    let ctx = canvas.context;
+
+    ctx.fillStyle = hexColor;
+    ctx.fillRect(0, 0, 6, 6);
+
+    canvas.refresh();
+}
 }
 
 // ============================================================================
@@ -664,6 +707,7 @@ class Level2Scene extends Phaser.Scene {
     }
 
     create() {
+         this.physics.resume();
         this.lastActionTime = this.time.now;
 
         // Configuración de límites del nivel 2 (Luna)
@@ -1115,10 +1159,12 @@ class MainMenuScene extends Phaser.Scene {
         const playBtn = document.getElementById('btn-play');
         playBtn.onclick = () => {
             document.getElementById('menu-overlay').classList.remove('active');
-            this.scene.start('GameScene'); // Iniciar Nivel 1
+            currentLevelKey = 'GameScene'; // Nos aseguramos de asignar el nivel inicial
+            this.scene.start('GameScene'); 
         };
     }
 }
+
 
 // ============================================================================
 // CONFIGURACIÓN GLOBAL DEL JUEGO
@@ -1149,12 +1195,15 @@ const game = new Phaser.Game(configN1);
 let currentLevelKey = 'GameScene';
 
 const restartActiveScene = () => {
+    // 1. Ocultar los overlays de HTML
     document.getElementById('win-overlay').classList.remove('active');
     document.getElementById('gameover-overlay').classList.remove('active');
     
-    // Reiniciar la escena de nivel que esté activa usando su clave guardada
-    game.scene.stop(currentLevelKey);
-    game.scene.start(currentLevelKey);
+    // 2. Reiniciar la escena activa usando el gestor de escenas de Phaser
+    const activeScene = game.scene.getScene(currentLevelKey);
+    if (activeScene) {
+        activeScene.scene.restart();
+    }
 };
 
 document.getElementById('btn-restart-win').onclick = restartActiveScene;
