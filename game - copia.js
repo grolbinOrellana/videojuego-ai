@@ -185,7 +185,6 @@ function createSharedTextures(scene) {
     // así que se genera un ícono placeholder por canvas. Cuando exista el arte
     // definitivo, basta con reemplazar este bloque por
     // scene.load.image('botas', 'Recursos/botas.png') en el preload().
-    /*
     if (!scene.textures.exists('boots_tex')) {
         let bCanvas = scene.textures.createCanvas('boots_tex', 32, 24);
         let bCtx = bCanvas.context;
@@ -200,7 +199,7 @@ function createSharedTextures(scene) {
         bCtx.fillRect(18, 4, 12, 3);
         bCanvas.refresh();
     }
-*/
+
     // --- Partículas ---
     createParticleTexture(scene, 'part_white', '#ffffff');
     createParticleTexture(scene, 'part_magenta', '#ec4899');
@@ -342,163 +341,6 @@ function ensureHudOptionsButton() {
     }
 }
 
-
-// ============================================================================
-// SISTEMA COMPARTIDO DE METEORITOS
-// - Caen dentro de la zona visible de la cámara.
-// - Si el jugador permanece prácticamente inmóvil durante 3 segundos,
-//   el siguiente meteorito cae directamente sobre su posición.
-// ============================================================================
-function setupMeteorSystem(scene) {
-    scene.meteorites = scene.physics.add.group({ allowGravity: true });
-
-    scene.meteorConfig = {
-        minDelay: 4500,          // tiempo mínimo entre meteoritos aleatorios
-        maxDelay: 8000,          // tiempo máximo entre meteoritos aleatorios
-        idleTime: 3000,          // 3 segundos sin moverse
-        idleTolerance: 8,        // movimiento menor a 8 px cuenta como quieto
-        targetedCooldown: 4500,  // evita lanzar meteoritos dirigidos sin parar
-        damage: 20,              // daño al oxígeno en niveles 1 y 2
-        speedMin: 280,
-        speedMax: 420
-    };
-
-    scene.nextMeteorAt = scene.time.now + Phaser.Math.Between(
-        scene.meteorConfig.minDelay,
-        scene.meteorConfig.maxDelay
-    );
-    scene.lastMeteorTargetedAt = -Infinity;
-    scene.playerStillSince = scene.time.now;
-    scene.lastMeteorPlayerX = scene.player.x;
-    scene.lastMeteorPlayerY = scene.player.y;
-
-    scene.physics.add.overlap(
-        scene.player,
-        scene.meteorites,
-        (player, meteor) => hitPlayerWithMeteor(scene, meteor),
-        null,
-        scene
-    );
-
-    scene.physics.add.collider(
-        scene.meteorites,
-        scene.platforms,
-        (meteor) => destroyMeteor(scene, meteor),
-        null,
-        scene
-    );
-}
-
-function updateMeteorSystem(scene, time) {
-    if (!scene.meteorites || scene.isGameOver || scene.isGameWon || scene.isTransitioningPhase) return;
-
-    const cfg = scene.meteorConfig;
-    const moved = Phaser.Math.Distance.Between(
-        scene.player.x, scene.player.y,
-        scene.lastMeteorPlayerX, scene.lastMeteorPlayerY
-    );
-
-    if (moved > cfg.idleTolerance) {
-        scene.playerStillSince = time;
-        scene.lastMeteorPlayerX = scene.player.x;
-        scene.lastMeteorPlayerY = scene.player.y;
-    }
-
-    const idleForThreeSeconds = time - scene.playerStillSince >= cfg.idleTime;
-    const targetedReady = time - scene.lastMeteorTargetedAt >= cfg.targetedCooldown;
-
-    if (idleForThreeSeconds && targetedReady) {
-        spawnMeteor(scene, scene.player.x, true);
-        scene.lastMeteorTargetedAt = time;
-        scene.playerStillSince = time;
-        scene.nextMeteorAt = time + Phaser.Math.Between(cfg.minDelay, cfg.maxDelay);
-        return;
-    }
-
-    if (time >= scene.nextMeteorAt) {
-        const camera = scene.cameras.main;
-        const margin = 40;
-        const minX = camera.worldView.x + margin;
-        const maxX = camera.worldView.right - margin;
-        spawnMeteor(scene, Phaser.Math.Between(Math.floor(minX), Math.floor(maxX)), false);
-        scene.nextMeteorAt = time + Phaser.Math.Between(cfg.minDelay, cfg.maxDelay);
-    }
-
-    scene.meteorites.getChildren().forEach(meteor => {
-        if (meteor.y > scene.physics.world.bounds.bottom + 80) meteor.destroy();
-    });
-}
-
-function spawnMeteor(scene, targetX, aimedAtPlayer) {
-    const camera = scene.cameras.main;
-    const spawnY = camera.worldView.y - 70;
-    const startX = Phaser.Math.Clamp(targetX + Phaser.Math.Between(-18, 18), 20, 3180);
-
-    const meteor = scene.meteorites.create(startX, spawnY, 'meteorito');
-    meteor.setDisplaySize(44, 44);
-    meteor.body.setSize(30, 30);
-    meteor.body.setAllowGravity(false);
-    meteor.damage = scene.meteorConfig.damage;
-    meteor.aimedAtPlayer = aimedAtPlayer;
-
-    const destinationY = scene.player.y + 40;
-    const angle = Phaser.Math.Angle.Between(startX, spawnY, targetX, destinationY);
-    const speed = Phaser.Math.Between(scene.meteorConfig.speedMin, scene.meteorConfig.speedMax);
-    scene.physics.velocityFromRotation(angle, speed, meteor.body.velocity);
-    meteor.setRotation(angle + Math.PI / 2);
-
-    scene.tweens.add({
-        targets: meteor,
-        angle: meteor.angle + 360,
-        duration: 700,
-        repeat: -1
-    });
-}
-
-function hitPlayerWithMeteor(scene, meteor) {
-    if (!meteor || !meteor.active) return;
-    const damage = meteor.damage || 20;
-    destroyMeteor(scene, meteor);
-
-    if (typeof scene.damagePlayer === 'function') {
-        scene.damagePlayer(damage);
-        return;
-    }
-
-    if (typeof scene.oxygenCurrent === 'number') {
-        scene.oxygenCurrent = Math.max(0, scene.oxygenCurrent - damage);
-        if (typeof scene.updateOxygenHUD === 'function') scene.updateOxygenHUD();
-        scene.cameras.main.shake(160, 0.012);
-        scene.playerVisual.setTint(0xff5555);
-        scene.time.delayedCall(180, () => {
-            if (scene.playerVisual && scene.playerVisual.active) scene.playerVisual.clearTint();
-        });
-        if (scene.oxygenCurrent <= 0) scene.handleGameOver('oxygen');
-    } else {
-        // Nivel sin barra de vida: el impacto provoca derrota directa.
-        scene.handleGameOver('meteor');
-    }
-}
-
-function destroyMeteor(scene, meteor) {
-    if (!meteor || !meteor.active) return;
-    const x = meteor.x;
-    const y = meteor.y;
-    meteor.destroy();
-
-    const particles = scene.add.particles(x, y, 'part_orange', {
-        speed: { min: 35, max: 120 },
-        angle: { min: 0, max: 360 },
-        scale: { start: 1.1, end: 0 },
-        alpha: { start: 0.9, end: 0 },
-        lifespan: 350,
-        quantity: 10,
-        blendMode: 'ADD'
-    });
-    particles.explode();
-    scene.time.delayedCall(400, () => particles.destroy());
-}
-
 // ============================================================================
 // CLASE BASE - Toda la lógica común a los 3 niveles
 // ============================================================================
@@ -526,7 +368,7 @@ class BasePlanetScene extends Phaser.Scene {
         this.oxygenCurrent = this.oxygenMax;
 
         this.textureOffsets = {
-            frontal:        { x: 2, y: 2 },
+            frontal:        { x: 1.5, y: 2 },
             derecha:        { x: 3, y: 1 },
             izquierda:      { x: -3, y: 1 },
             saltoDerecha:   { x: 4, y: 2 },
@@ -535,14 +377,12 @@ class BasePlanetScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('meteorito', 'Recursos/meteorito.png');
         this.load.image('marciano', 'Recursos/marciano.png');
         this.load.image('frontal', 'Recursos/frontal.png');
         this.load.image('derecha', 'Recursos/derecha.png');
         this.load.image('izquierda', 'Recursos/izquierda.png');
         this.load.image('saltoDerecha', 'Recursos/saltoDerecha.png');
         this.load.image('saltoIzquierda', 'Recursos/saltoIzquierda.png');
-        this.load.image('botas', 'Recursos/botas.png');
         if (this.levelConfig.portalTexture === 'nave') {
             this.load.image('nave', 'Recursos/nave.png');
         } else if (this.levelConfig.portalTexture === 'nave1') {
@@ -587,7 +427,7 @@ class BasePlanetScene extends Phaser.Scene {
         this.player.body.setMaxVelocity(cfg.maxVelocityX, cfg.maxVelocityY);
         this.player.setOrigin(0.5, 0.5);
         this.player.setAlpha(0);
-        this.player.body.setSize(20, 32);
+        this.player.body.setSize(20, cfg.hitboxHeight || 32);
 
         this.playerVisual = this.add.sprite(cfg.playerStart.x, cfg.playerStart.y, 'frontal');
         this.playerVisual.setOrigin(0.5, 0.5);
@@ -600,9 +440,6 @@ class BasePlanetScene extends Phaser.Scene {
         this.physics.add.collider(this.player, this.movingPlatforms);
         this.physics.add.overlap(this.player, this.gems, this.collectGem, null, this);
         this.physics.add.overlap(this.player, this.portal, this.winGame, null, this);
-
-        // --- Meteoritos compartidos ---
-        setupMeteorSystem(this);
 
         // --- Controles ---
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -644,8 +481,6 @@ class BasePlanetScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isGameOver || this.isGameWon) return;
         const cfg = this.levelConfig;
-
-        updateMeteorSystem(this, time);
 
         // --- Consumo de oxígeno con el paso del tiempo (solo niveles con usesOxygen) ---
         if (this.usesOxygen) {
@@ -923,7 +758,7 @@ class Level1Scene extends BasePlanetScene {
             playerStart: { x: 100, y: 450 },
             verticalPlatformRange: { top: 250, bottom: 526 },
             verticalPlatformSpeed: 100,
-            horizontalPlatformRange: { left: 1750, right: 1900 },
+            horizontalPlatformRange: { left: 1750, right: 2150 },
             horizontalPlatformSpeed: 200,
             hudStatusText: 'SECTOR LUNAR',
             gameOverText: 'SEÑAL PERDIDA',
@@ -958,12 +793,12 @@ class Level1Scene extends BasePlanetScene {
         // --- Plataformas estáticas ---
         this.platforms.create(400, 556, 'plat_moon_800');
         this.platforms.create(1600, 556, 'plat_moon_500');
-        this.platforms.create(3100, 556, 'plat_moon_1200');
+        this.platforms.create(2700, 556, 'plat_moon_1200');
         this.platforms.create(985, 520, 'plat_moon_150');
         this.platforms.create(1525, 320, 'plat_moon_200');
         //this.platforms.create(1780, 300, 'plat_moon_150');
-        this.platforms.create(2150, 400, 'plat_moon_200');
-        this.platforms.create(2480, 360, 'plat_moon_200');
+        this.platforms.create(2250, 420, 'plat_moon_200');
+        this.platforms.create(2480, 330, 'plat_moon_200');
         //this.platforms.create(2750, 240, 'plat_moon_150');
         this.platforms.refresh();
 
@@ -994,13 +829,13 @@ class Level1Scene extends BasePlanetScene {
         // --- Tanques de oxígeno (reemplazan a las gemas en este nivel) ---
         const oxygenCoords = [
             {x: 300, y: 460}, /*{x: 600, y: 440},*/ {x: 1000, y: 450}, {x: 1500, y: 500},
-            {x: 1550, y: 250}, /*{x: 1780, y: 120},*/ {x: 2020, y: 225}, /*{x: 2250, y: 300},*/
-            /*{x: 2480, y: 200},*/ {x: 2550, y: 320}
+            {x: 1550, y: 250}, /*{x: 1780, y: 120},*/ {x: 2020, y: 250}, {x: 2250, y: 300},
+            {x: 2480, y: 200}, {x: 2750, y: 120}
         ];
 
         oxygenCoords.forEach(coord => {
             let tank = this.gems.create(coord.x, coord.y, 'oxygen_pickup');
-            tank.setDisplaySize(48, 48);
+            tank.setDisplaySize(28, 28);
             tank.body.setImmovable(true);
             this.tweens.add({
                 targets: tank, y: coord.y - 12,
@@ -1055,11 +890,11 @@ class Level2Scene extends Phaser.Scene {
         this.oxygenRechargeReadyAt = 0;
 
         this.textureOffsets = {
-            frontal:        { x: 2, y: 2 },
-            derecha:        { x: 3, y: 1 },
-            izquierda:      { x: -3, y: 1 },
-            saltoDerecha:   { x: 4, y: 2 },
-            saltoIzquierda: { x: -4, y: 2 }
+            frontal:        { x: 0, y: 0 },
+            derecha:        { x: 0, y: 0 },
+            izquierda:      { x: 0, y: 0 },
+            saltoDerecha:   { x: 0, y: 0 },
+            saltoIzquierda: { x: 0, y: 0 }
         };
 
         // --- Estado de combate ---
@@ -1074,7 +909,6 @@ class Level2Scene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('meteorito', 'Recursos/meteorito.png');
         this.load.image('marciano', 'Recursos/marciano.png');
         this.load.image('frontal', 'Recursos/frontal.png');
         this.load.image('derecha', 'Recursos/derecha.png');
@@ -1097,12 +931,11 @@ class Level2Scene extends Phaser.Scene {
         this.load.image('marcianoSaltoIzquierda', 'Recursos/marcianoSaltoIzquierda.png');
         this.load.image('marcianoVueloDerecha', 'Recursos/marcianoVueloDerecha.png');
         this.load.image('marcianoVueloIzquierda', 'Recursos/marcianoVueloIzquierda.png');
-        this.load.image('botas', 'Recursos/botas.png');
         // --- Sprites del jugador con arma ---
         this.load.image('derechaArma', 'Recursos/derechaArma.png');
         this.load.image('izquierdaArma', 'Recursos/izquierdaArma.png');
         this.load.image('saltoDerechaArma', 'Recursos/saltoDerechaArma.png');
-        this.load.image('saltoIzquierdaArma', 'Recursos/saltoIzquierdaArma.png');
+        this.load.image('saltoIzquierdaArma', 'Recursos/SaltolzquierdaArma.png');
         // --- Sprites de balas ---
         this.load.image('balaAmarilla', 'Recursos/balaAmarilla.png');
         this.load.image('balaRoja', 'Recursos/balaRoja.png');
@@ -1171,7 +1004,7 @@ class Level2Scene extends Phaser.Scene {
         this.player.body.setMaxVelocity(400, 800);
         this.player.setOrigin(0.5, 0.5);
         this.player.setAlpha(0);
-        this.player.body.setSize(20, 32);
+        this.player.body.setSize(32, 32);
 
         this.playerVisual = this.add.sprite(this.playerStart.x, this.playerStart.y, 'frontal');
         this.playerVisual.setOrigin(0.5, 0.5);
@@ -1186,9 +1019,6 @@ class Level2Scene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.armaGroup, this.collectArma, null, this);
         this.physics.add.overlap(this.player, this.bootsGroup, this.collectBoots, null, this);
         this.physics.add.overlap(this.player, this.portal, this.winGame, null, this);
-
-        // --- Meteoritos compartidos ---
-        setupMeteorSystem(this);
         this.physics.add.overlap(this.player, this.enemyBullets, this.handleBulletHit, null, this);
         this.physics.add.overlap(this.player, this.enemyDrones, this.handleDroneContact, null, this);
         this.physics.add.overlap(this.player, this.enemyArcProjectiles, this.handleArcProjectileHit, null, this);
@@ -1246,7 +1076,7 @@ class Level2Scene extends Phaser.Scene {
         this.platforms.create(1650, 350, 'plat_mars_150');
         this.platforms.create(2150, 440, 'plat_mars_200');
         this.platforms.create(2400, 360, 'plat_mars_200');
-        this.platforms.create(2650, 500, 'plat_mars_150');
+        this.platforms.create(2650, 270, 'plat_mars_150');
         this.platforms.refresh();
 
         let verticalPlat = this.movingPlatforms.create(1200, 380, 'plat_mars_100');
@@ -1277,14 +1107,14 @@ class Level2Scene extends Phaser.Scene {
         ];
         gasCoords.forEach(coord => this.spawnGasolina(coord.x, coord.y));
 
-        this.playerStart = { x: 2000, y: 450 };
+        this.playerStart = { x: 100, y: 450 };
 
         // --- Jefe: Robot Soldado ---
-        this.boss = this.physics.add.sprite(2200, 450, 'soldadoDerecha');
+        this.boss = this.physics.add.sprite(2200, 500, 'soldadoDerecha');
         // ── TAMAÑO VISUAL del soldado ──────────────────────────────────────────
         // setDisplaySize(ancho, alto) → píxeles en pantalla, independiente del PNG original.
         // Cambia aquí para agrandar/achicar el sprite visible.
-        this.boss.setDisplaySize(80, 80);
+        this.boss.setDisplaySize(52, 52);
 
         // ── HITBOX del soldado ─────────────────────────────────────────────────
         // setSize(w, h)      → tamaño de la caja de colisión en px (mundo físico).
@@ -1293,29 +1123,11 @@ class Level2Scene extends Phaser.Scene {
         // Fórmula de centrado: offsetX = (spriteNaturalW - hitboxW) / 2
         //                      offsetY = (spriteNaturalH - hitboxH)   ← ancla en los pies
         // Ajusta estos valores si la hitbox no coincide visualmente (activa debug:true en Phaser).
-        
-        //Físicas
         this.boss.body.allowGravity = true;
-        //this.boss.body.setGravityY(620);
-        //this.boss.body.allowGravity = false;
-        this.boss.body.setImmovable(false);
+        this.boss.body.setGravityY(620);
+        this.boss.body.setSize(30, 44);
+        this.boss.body.setOffset(11, 8); // centra la hitbox dentro del sprite 52×52
         this.boss.body.setMaxVelocity(200, 800);
-
-        //HitboxDeseada
-        const hitboxW = 24;
-        const hitboxH = 58;
-
-        this.boss.body.setSize(
-        hitboxW / Math.abs(this.boss.scaleX),
-        hitboxH / Math.abs(this.boss.scaleY),
-    );
-        this.boss.body.setOffset(450,210)
-
-    
-
-
-        //this.boss.body.setOffset(11, 8); // centra la hitbox dentro del sprite 52×52
-        
         this.physics.add.collider(this.boss, this.platforms);
         this.physics.add.collider(this.boss, this.movingPlatforms);
 
@@ -1389,7 +1201,6 @@ class Level2Scene extends Phaser.Scene {
         // ── TAMAÑO VISUAL del Centinela Marciano ──────────────────────────────
         // Cambia setDisplaySize(ancho, alto) para escalar el sprite en pantalla.
         this.boss.setDisplaySize(48, 48);
-        
 
         // ── HITBOX del Centinela ───────────────────────────────────────────────
         // setSize(w, h)   → caja de colisión física.
@@ -1400,16 +1211,7 @@ class Level2Scene extends Phaser.Scene {
         //   · Offset  (11, 5) centra la caja dentro del sprite
         this.boss.body.allowGravity = false;
         this.boss.body.setImmovable(false);
-        const hitboxeW = 38;
-        const hitboxeH = 38;
-
-        this.boss.body.setSize(
-        hitboxeW / Math.abs(this.boss.scaleX),
-        hitboxeH / Math.abs(this.boss.scaleY),
-        true
-    );
-        this.boss.setOffset(0,200)
-
+        this.boss.body.setSize(26, 38);
         this.boss.body.setOffset(11, 5); // centra la hitbox dentro del sprite 48×48
         this.physics.add.collider(this.boss, this.platforms);
         this.physics.add.collider(this.boss, this.movingPlatforms);
@@ -1458,15 +1260,7 @@ class Level2Scene extends Phaser.Scene {
     // └──────────────────────────────────────────────────────────────────────┘
     spawnGasolina(x, y) {
         let gas = this.gasolinaGroup.create(x, y, 'gasolina');
-        gas.setDisplaySize(48, 48); // ← tamaño visual del coleccionable de gasolina
-        const hitboxVisibleW = 20;
-        const hitboxVisibleH = 20;
-
-        const hitboxOriginalW = hitboxVisibleW / gas.scaleX;
-        const hitboxOriginalH = hitboxVisibleH / gas.scaleY;
-        gas.body.setSize(hitboxOriginalW, hitboxOriginalH);
-        gas.body.setOffset(425, 350);
-
+        gas.setDisplaySize(26, 26); // ← tamaño visual del coleccionable de gasolina
         gas.body.setImmovable(true);
         this.tweens.add({
             targets: gas, y: y - 12,
@@ -1540,8 +1334,6 @@ class Level2Scene extends Phaser.Scene {
     // ========================================================================
     update(time, delta) {
         if (this.isGameOver || this.isGameWon || this.isTransitioningPhase) return;
-
-        updateMeteorSystem(this, time);
 
         // --- Consumo de oxígeno con el paso del tiempo ---
         this.oxygenCurrent -= this.oxygenDepletionRate * (delta / 1000);
@@ -1731,8 +1523,6 @@ class Level2Scene extends Phaser.Scene {
                 boss.setVelocityX(0);
                 if (time > this.bossNextActionAt) {
                     this.bossState = 'shooting';
-                    this.bossShotsFired = 0;
-                    this.bossShotsToFire = Phaser.Math.Between(1, 3);
                     this.bossNextActionAt = time + 250;
                 }
             }
@@ -1741,16 +1531,16 @@ class Level2Scene extends Phaser.Scene {
             this.bossFacing = dx < 0 ? -1 : 1;
             boss.setTexture(this.bossFacing === 1 ? 'soldadoDerecha' : 'soldadoIzquierda');
             boss.setFlipX(false);
-            if (this.bossShotsFired < this.bossShotsToFire && time > this.bossNextActionAt) {
+            if (this.bossShotsFired < 3 && time > this.bossNextActionAt) {
                 this.fireBossBullet(boss.x + (this.bossFacing * 20), boss.y - 4, this.bossFacing);
                 this.bossShotsFired++;
                 this.bossNextActionAt = time + 280;
-            } else if (this.bossShotsFired >= this.bossShotsToFire) {
+            } else if (this.bossShotsFired >= 3) {
                 this.bossState = 'cover';
                 this.bossInvulnerable = true;
                 boss.setAlpha(0.5);
                 boss.setTexture(this.bossFacing === 1 ? 'soldadoSaltoDerecha' : 'soldadoSaltoIzquierda');
-                //boss.setDisplaySize(52, 40);
+                boss.setDisplaySize(52, 40);
                 this.bossNextActionAt = time + 1800;
             }
         } else if (this.bossState === 'cover') {
@@ -1759,7 +1549,7 @@ class Level2Scene extends Phaser.Scene {
                 this.bossInvulnerable = false;
                 boss.setAlpha(1);
                 boss.setTexture(this.bossFacing === 1 ? 'soldadoDerecha' : 'soldadoIzquierda');
-                //boss.setDisplaySize(52, 52);
+                boss.setDisplaySize(52, 52);
                 this.bossState = playerInZone ? 'chase' : 'patrol';
                 this.bossNextActionAt = time + (this.bossState === 'chase' ? 300 : 800);
                 this.bossShotsFired = 0;
@@ -2070,7 +1860,6 @@ class Level2Scene extends Phaser.Scene {
     boss.setAlpha(1);
     boss.setVisible(true);
     boss.setDisplaySize(48, 48);
-    
 }
 
     // --- Cambia entre volar (flotando a altura fija) y caminar por el suelo ---
@@ -2345,7 +2134,7 @@ boss.body.reset(boss.x, this.bossBaseY);
     // │  boots.setDisplaySize(ancho, alto) → escala del sprite de las botas  │
     // └──────────────────────────────────────────────────────────────────────┘
     spawnBoots(x, y) {
-        let boots = this.bootsGroup.create(x, y, 'botas');
+        let boots = this.bootsGroup.create(x, y, 'boots_tex');
         boots.setDisplaySize(36, 28); // ← tamaño visual de las botas droppeable
         boots.body.setImmovable(true);
         boots.body.setAllowGravity(true);
@@ -2570,16 +2359,15 @@ class Level3Scene extends Phaser.Scene {
         this.optionsPausedPhysics = false;
 
         this.textureOffsets = {
-        frontal:        { x: 2, y: 2 },
-            derecha:        { x: 3, y: 1 },
-            izquierda:      { x: -3, y: 1 },
-            saltoDerecha:   { x: 4, y: 2 },
-            saltoIzquierda: { x: -4, y: 2 }    // <- ajustá si hace falta
+        frontal:        { x: 0, y: 0 },
+        derecha:        { x: 0, y: 0 },
+        izquierda:      { x: 0, y: -3 },   // <- ajustá este valor
+        saltoDerecha:   { x: 0, y: 0 },    // <- ajustá si hace falta
+        saltoIzquierda: { x: 0, y: 0 }     // <- ajustá si hace falta
     };
     }
 
     preload() {
-        this.load.image('meteorito', 'Recursos/meteorito.png');
         this.load.image('frontal', 'Recursos/frontal.png');
         this.load.image('derecha', 'Recursos/derecha.png');
         this.load.image('izquierda', 'Recursos/izquierda.png');
@@ -2681,7 +2469,7 @@ class Level3Scene extends Phaser.Scene {
         this.player.body.setMaxVelocity(420, 850);
         this.player.setOrigin(0.5, 0.5);
         this.player.setAlpha(0);
-        this.player.body.setSize(20, 32);
+        this.player.body.setSize(32, 32);
 
         this.playerVisual = this.add.sprite(100, 450, 'frontal');
         this.playerVisual.setOrigin(0.5, 0.5);
@@ -2694,9 +2482,6 @@ class Level3Scene extends Phaser.Scene {
         this.physics.add.collider(this.player, this.movingPlatforms);
         this.physics.add.overlap(this.player, this.gems, this.collectGem, null, this);
         this.physics.add.overlap(this.player, this.portal, this.winGame, null, this);
-
-        // --- Meteoritos compartidos ---
-        setupMeteorSystem(this);
 
         // --- Controles ---
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -2722,10 +2507,8 @@ class Level3Scene extends Phaser.Scene {
         document.getElementById('hud-status').className = 'hud-value neon-glow-cyan';
     }
 
-    update(time) {
+    update() {
         if (this.isGameOver || this.isGameWon) return;
-
-        updateMeteorSystem(this, time);
 
         let isMovingLeft = this.cursors.left.isDown || this.keyA.isDown;
         let isMovingRight = this.cursors.right.isDown || this.keyD.isDown;
@@ -2966,14 +2749,13 @@ class MainMenuScene extends Phaser.Scene {
         level2Btn.onclick = () => {
             document.getElementById('menu-overlay').classList.remove('active');
             currentLevelKey = 'Level2Scene';
-            this.scene.start('Level2Scene');
+            //this.scene.start('Level2Scene');
             
-            /*
             this.scene.start('Level2Scene', {
                 phase: 2,
                 gasoline: 10,
                 hasWeapon: true
-            });*/
+            });
         };
 
         // --- BOTÓN NIVEL 3 (Júpiter) ---
@@ -3020,7 +2802,7 @@ const configN1 = {
         default: 'arcade',
         arcade: {
             gravity: { y: 800 },
-            debug: false
+            debug: true
         }
     },
     scene: [MainMenuScene, Level1Scene, Level2Scene, Level3Scene]

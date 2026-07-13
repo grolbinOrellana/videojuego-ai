@@ -53,7 +53,8 @@
                 <p class="stats-text">Has alcanzado la meta con éxito.</p>
                 
                 <div class="stats-box">
-                    <p>Gemas recolectadas: <span id="win-gems" class="highlight">0/10</span></p>
+                    <p id="win-gems-row">Gemas recolectadas: <span id="win-gems" class="highlight">0/10</span></p>
+                    <p id="win-oxygen-row" style="display:none;">Oxígeno restante: <span id="win-oxygen" class="highlight">0%</span></p>
                 </div>
 
                 <button id="btn-restart-win" class="btn-neon green">
@@ -71,8 +72,8 @@
         <!-- Pantalla de Derrota (Game Over Overlay) -->
         <div id="gameover-overlay" class="overlay">
             <div class="glass-panel gameover-panel">
-                <h2 class="neon-text-red">¡CONEXIÓN PERDIDA!</h2>
-                <p class="stats-text">Te has desvanecido en el vacío.</p>
+                <h2 id="gameover-title" class="neon-text-red">¡CONEXIÓN PERDIDA!</h2>
+                <p id="gameover-text" class="stats-text">Te has desvanecido en el vacío.</p>
 
                 <button id="btn-restart-fail" class="btn-neon red">
                     <span class="btn-text">REINTENTAR</span>
@@ -83,9 +84,16 @@
 
         <!-- HUD (Cabecera durante el juego) -->
         <div id="game-hud" class="hud-container">
-            <div class="hud-item">
+            <div id="hud-item-gems" class="hud-item">
                 <span class="hud-label">GEMAS:</span>
                 <span id="hud-gems" class="hud-value">0 / 0</span>
+            </div>
+            <div id="hud-item-oxygen" class="hud-item" style="display:none;">
+                <span class="hud-label">O₂:</span>
+                <div class="oxygen-bar-track">
+                    <div id="hud-oxygen-fill" class="oxygen-bar-fill"></div>
+                </div>
+                <span id="hud-oxygen-value" class="hud-value">100%</span>
             </div>
             <div class="hud-item">
                 <span class="hud-label">ESTADO:</span>
