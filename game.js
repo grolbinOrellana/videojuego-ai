@@ -353,8 +353,8 @@ function setupMeteorSystem(scene) {
     scene.meteorites = scene.physics.add.group({ allowGravity: true });
 
     scene.meteorConfig = {
-        minDelay: 4500,          // tiempo mínimo entre meteoritos aleatorios
-        maxDelay: 8000,          // tiempo máximo entre meteoritos aleatorios
+        minDelay: 1000,          // tiempo mínimo entre meteoritos aleatorios
+        maxDelay: 4000,          // tiempo máximo entre meteoritos aleatorios
         idleTime: 3000,          // 3 segundos sin moverse
         idleTolerance: 8,        // movimiento menor a 8 px cuenta como quieto
         targetedCooldown: 4500,  // evita lanzar meteoritos dirigidos sin parar
@@ -980,7 +980,7 @@ class Level1Scene extends BasePlanetScene {
         horizontalPlat.body.setFriction(1, 1);
 
         // --- Portal / Destino final: nave1 ---
-        this.portal = this.physics.add.sprite(3050, 496, 'nave1');
+        this.portal = this.physics.add.sprite(3050, 446, 'nave1');
         this.portal.setDisplaySize(320, 320);
         this.portal.body.allowGravity = false;
         this.portal.body.setImmovable(true);
@@ -1239,29 +1239,36 @@ class Level2Scene extends Phaser.Scene {
     // ========================================================================
     createPhase1Content() {
         this.platforms.create(400, 556, 'plat_mars_800');
-        this.platforms.create(1450, 556, 'plat_mars_700');
+        this.platforms.create(150, 556, 'plat_mars_700');
         this.platforms.create(2600, 556, 'plat_mars_1200');
-        this.platforms.create(1000, 500, 'plat_mars_150');
-        this.platforms.create(1450, 400, 'plat_mars_200');
-        this.platforms.create(1650, 350, 'plat_mars_150');
-        this.platforms.create(2150, 440, 'plat_mars_200');
-        this.platforms.create(2400, 360, 'plat_mars_200');
+        this.platforms.create(950, 500, 'plat_mars_150');
+        this.platforms.create(1450, 420, 'plat_mars_200');
+        this.platforms.create(1700, 370, 'plat_mars_150');
+        this.platforms.create(2150, 460, 'plat_mars_200');
+        this.platforms.create(2450, 460, 'plat_mars_150');
         this.platforms.create(2650, 500, 'plat_mars_150');
         this.platforms.refresh();
 
-        let verticalPlat = this.movingPlatforms.create(1200, 380, 'plat_mars_100');
+        let verticalPlat = this.movingPlatforms.create(1900, 380, 'plat_mars_100');
         verticalPlat.name = 'vertical';
         verticalPlat.body.setVelocityY(-100);
         verticalPlat.body.setFriction(1, 1);
 
-        let horizontalPlat = this.movingPlatforms.create(1900, 380, 'plat_mars_120');
+        /*
+        let verticalPlat = this.movingPlatforms.create(2650, 500, 'plat_mars_100');
+        verticalPlat.name = 'vertical2';
+        verticalPlat.body.setVelocityY(-100);
+        verticalPlat.body.setFriction(1, 1);
+        */
+
+        let horizontalPlat = this.movingPlatforms.create(1100, 460, 'plat_mars_120');
         horizontalPlat.name = 'horizontal';
         horizontalPlat.body.setVelocityX(120);
         horizontalPlat.body.setFriction(1, 1);
 
         this.verticalPlatformRange = { top: 250, bottom: 470 };
         this.verticalPlatformSpeed = 100;
-        this.horizontalPlatformRange = { left: 1750, right: 2050 };
+        this.horizontalPlatformRange = { left: 1100, right: 1250 };
         this.horizontalPlatformSpeed = 120;
 
         // --- Portal hacia la Fase 2 (bloqueado hasta vencer al Robot Soldado) ---
@@ -1272,12 +1279,12 @@ class Level2Scene extends Phaser.Scene {
 
         // --- Gasolina: 7 unidades en esta fase ---
         const gasCoords = [
-            {x: 400, y: 480}, {x: 600, y: 420}, {x: 900, y: 370}, {x: 1200, y: 220},
-            {x: 1450, y: 320}, {x: 1650, y: 230}, {x: 2400, y: 280}
+            {x: 400, y: 480}, {x: 650, y: 480}, {x: 1000, y: 440}, {x: 1200, y: 420},
+            {x: 1500, y: 310}, {x: 1750, y: 250}, {x: 2400, y: 280}
         ];
         gasCoords.forEach(coord => this.spawnGasolina(coord.x, coord.y));
 
-        this.playerStart = { x: 2000, y: 450 };
+        this.playerStart = { x: 100, y: 450 };
 
         // --- Jefe: Robot Soldado ---
         this.boss = this.physics.add.sprite(2200, 450, 'soldadoDerecha');
@@ -1347,39 +1354,41 @@ class Level2Scene extends Phaser.Scene {
     // ========================================================================
     createPhase2Content() {
         this.platforms.create(400, 556, 'plat_mars_800');
-        this.platforms.create(1450, 556, 'plat_mars_700');
+        this.platforms.create(1350, 556, 'plat_mars_600');
         this.platforms.create(2700, 556, 'plat_mars_1200');
         this.platforms.create(900, 520, 'plat_mars_150');
-        this.platforms.create(1350, 580, 'plat_mars_200');
-        this.platforms.create(1700, 500, 'plat_mars_150');
-        this.platforms.create(2150, 620, 'plat_mars_200');
-        this.platforms.create(2450, 530, 'plat_mars_200');
+        //this.platforms.create(1350, 580, 'plat_mars_200');
+        this.platforms.create(1800, 500, 'plat_mars_150');
+        //this.platforms.create(2150, 620, 'plat_mars_200');
+        //this.platforms.create(2450, 530, 'plat_mars_200');
         this.platforms.refresh();
 
-        let horizontalPlat = this.movingPlatforms.create(1950, 550, 'plat_mars_120');
+        let horizontalPlat = this.movingPlatforms.create(1950, 546, 'plat_mars_100');
         horizontalPlat.name = 'horizontal';
         horizontalPlat.body.setVelocityX(110);
         horizontalPlat.body.setFriction(1, 1);
 
         this.verticalPlatformRange = { top: 250, bottom: 470 };
         this.verticalPlatformSpeed = 100;
-        this.horizontalPlatformRange = { left: 1800, right: 2100 };
+        this.horizontalPlatformRange = { left: 1950, right: 2050 };
         this.horizontalPlatformSpeed = 110;
 
         // --- nave2: salida final del Nivel 2 (bloqueada hasta vencer al Centinela) ---
-        this.portal = this.physics.add.sprite(3050, 520, 'nave2');
-        this.portal.setDisplaySize(220, 220);
+        this.portal = this.physics.add.sprite(3050, 450, 'nave2');
+        this.portal.setDisplaySize(400, 400);
+        //this.portal.body.setOffset(0,10000);
         this.portal.body.allowGravity = false;
         this.portal.body.setImmovable(true);
-        this.portal.body.setSize(140, 200);
+        this.portal.body.setSize(140, 400);
 
         // --- Gasolina: 8 unidades en esta fase ---
         const gasCoords = [
-            {x: 350, y: 480}, {x: 650, y: 420}, {x: 950, y: 380}, {x: 1350, y: 260},
-            {x: 1700, y: 240}, {x: 2150, y: 340}, {x: 2450, y: 250}, {x: 2750, y: 480}
+            {x: 350, y: 520}, {x: 650, y: 520}, {x: 950, y: 500}, {x: 1350, y: 500},
+            {x: 1700, y: 500}, //{x: 2150, y: 540}, {x: 2450, y: 250}, {x: 2750, y: 480}
         ];
         gasCoords.forEach(coord => this.spawnGasolina(coord.x, coord.y));
 
+        //phase2Start
         this.playerStart = { x: 100, y: 450 };
 
         // --- Jefe: Centinela Marciano ---
@@ -1420,7 +1429,7 @@ class Level2Scene extends Phaser.Scene {
         this.boss.setDepth(100);
 
         this.bossType = 'centinela';
-        this.bossHp = 4;
+        this.bossHp = 5;
         //console.log("HP inicial:", this.bossHp);
         this.bossMaxHp = 4;
         this.bossBaseY = this.boss.y;
